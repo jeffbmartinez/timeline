@@ -1,11 +1,45 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+
+	"github.com/jeffbmartinez/log"
+
+	// "github.com/jeffbmartinez/timeline/storage"
 )
 
 func Single(response http.ResponseWriter, request *http.Request) {
-	// store the data point
+	urlArgs := request.URL.Query()
+
+	log.Info(urlArgs)
+
+	REQUIRED_ARGS := []string{
+		"owner",
+		"category",
+	}
+
+	missingArgs := make([]string, 0, len(REQUIRED_ARGS))
+
+	for _, expectedArg := range REQUIRED_ARGS {
+		if argument := urlArgs.Get(expectedArg); argument == "" {
+			missingArgs = append(missingArgs, expectedArg)
+		}
+	}
+
+	if len(missingArgs) > 0 {
+		errorMessage := fmt.Sprintf("Missing arguments: %v", missingArgs)
+		log.Infof(errorMessage)
+		WriteSimpleResponse(response, errorMessage, http.StatusBadRequest)
+		return
+	}
+
+	// get the event
+
+	// event := &storage.Event{
+	// 	Owner:    urlArgs.Get("owner"),
+	// 	Category: urlArgs.Get("category"),
+	// }
 
 	WriteSimpleResponse(response, "single event recorded", http.StatusOK)
 }
