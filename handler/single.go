@@ -34,8 +34,6 @@ func Single(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// get the event
-
 	// event := &storage.Event{
 	// 	Owner:    urlArgs.Get("owner"),
 	// 	Category: urlArgs.Get("category"),

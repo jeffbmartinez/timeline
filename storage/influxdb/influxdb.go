@@ -11,7 +11,7 @@ import (
 	// "github.com/jeffbmartinez/timeline/storage"
 )
 
-func Initialize(host string, port int, dbname string) {
+func Initialize(host string, port int, dbname string, username string, password string) {
 	influxDbUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
 	if err != nil {
 		log.Fatal(err)
