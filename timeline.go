@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/jeffbmartinez/cleanexit"
+	"github.com/jeffbmartinez/config"
 	"github.com/jeffbmartinez/log"
 
 	"github.com/jeffbmartinez/timeline/handler"
@@ -23,7 +24,18 @@ const (
 	INFLUXDB_HOST = "localhost"
 	INFLUXDB_PORT = 8086
 	INFLUXDB_NAME = "test_timeline"
+
+	CONFIG_FILENAME = "config.json"
 )
+
+type Config struct {
+	InfluxDb InfluxDbConfig
+}
+
+type InfluxDbConfig struct {
+	Username string
+	Password string
+}
 
 func main() {
 	cleanexit.SetUpExitOnCtrlC(getPrintPrettyExitMessageFunc(PROJECT_NAME))
@@ -39,7 +51,22 @@ func main() {
 		listenHost = ""
 	}
 
-	influxdb.Initialize(INFLUXDB_HOST, INFLUXDB_PORT, INFLUXDB_NAME)
+	var configuration Config
+	err := config.ReadSpecific(CONFIG_FILENAME, &configuration)
+
+	if err != nil {
+		log.Fatal("Trouble reading config file")
+	}
+
+	verifyConfigOrDie(configuration)
+
+	influxdb.Initialize(
+		INFLUXDB_HOST,
+		INFLUXDB_PORT,
+		INFLUXDB_NAME,
+		configuration.InfluxDb.Username,
+		configuration.InfluxDb.Password,
+	)
 
 	displayServerInfo(listenHost, listenPort)
 
@@ -65,6 +92,24 @@ type StartEntry struct {
 type StopEntry struct {
 	TimelineEntry
 	StartEntryId string `json:"startEntryId"`
+}
+
+func verifyConfigOrDie(configuration Config) {
+	const NUMBER_OF_CHECKS = 10
+
+	problems := make([]string, 0, NUMBER_OF_CHECKS)
+
+	if configuration.InfluxDb.Username == "" {
+		problems = append(problems, "Config is missing influxDb.username")
+	}
+
+	if configuration.InfluxDb.Password == "" {
+		problems = append(problems, "Config is missing influxDb.password")
+	}
+
+	if len(problems) > 0 {
+		log.Fatal(problems)
+	}
 }
 
 func getPrintPrettyExitMessageFunc(projectName string) func() {

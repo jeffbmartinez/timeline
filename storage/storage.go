@@ -1,8 +1,8 @@
 package storage
 
 type Event struct {
-	Owner    string
-	Category string
+	Owner    string `json:"owner"`
+	Category string `json:"category"`
 }
 
 type EventStorer interface {
