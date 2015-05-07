@@ -1,6 +1,7 @@
 package influxdb
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -11,36 +12,32 @@ import (
 	// "github.com/jeffbmartinez/timeline/storage"
 )
 
-func Initialize(host string, port int, dbname string, username string, password string) {
+func Initialize(host string, port int, dbname string, username string, password string) error {
 	influxDbUrl, err := url.Parse(fmt.Sprintf("http://%s:%d", host, port))
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 
 	conf := client.Config{
 		URL:      *influxDbUrl,
-		Username: getInfluxDbUsername(),
-		Password: getInfluxDbPassword(),
+		Username: username,
+		Password: password,
 	}
 
 	connection, err := client.NewClient(conf)
 	if err != nil {
-		log.Fatal(err)
+		errorMessage := fmt.Sprintf("Count not create influxDB client (%v)", err)
+		log.Error(errorMessage)
+		return errors.New(errorMessage)
 	}
 
 	_, _, err = connection.Ping()
 	if err != nil {
-		log.Fatal(err)
+		errorMessage := fmt.Sprintf("Count not ping the influxDB server (%v)", err)
+		log.Error(errorMessage)
+		return errors.New(errorMessage)
 	}
+
 	log.Info("Connection to InfluxDB successful")
-}
-
-func getInfluxDbUsername() string {
-	// username := os.Getenv("INFLUX_USER")
-	return "root"
-}
-
-func getInfluxDbPassword() string {
-	// password := os.Getenv("INFLUX_PWD")
-	return "root"
+	return nil
 }
