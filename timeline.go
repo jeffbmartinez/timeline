@@ -79,26 +79,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }
 
-type TimelineEntry struct {
-	RequesterId string `json:"requesterId"`
-	GroupId     string `json:"groupId"`
-	Message     string `json:"message"`
-}
-
-type SingleEntry struct {
-	TimelineEntry
-	DurationSeconds int `json:"durationSeconds"`
-}
-
-type StartEntry struct {
-	TimelineEntry
-}
-
-type StopEntry struct {
-	TimelineEntry
-	StartEntryId string `json:"startEntryId"`
-}
-
 func verifyConfigOrDie(configuration Config) {
 	const NUMBER_OF_CHECKS = 10
 
