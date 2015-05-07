@@ -60,13 +60,18 @@ func main() {
 
 	verifyConfigOrDie(configuration)
 
-	influxdb.Initialize(
+	initializeErr := influxdb.Initialize(
 		INFLUXDB_HOST,
 		INFLUXDB_PORT,
 		INFLUXDB_NAME,
 		configuration.InfluxDb.Username,
 		configuration.InfluxDb.Password,
 	)
+
+	if initializeErr != nil {
+		fmt.Println("Count not connect to influxDB")
+		log.Fatalf("Could not initialize connection to influxDB: %v", initializeErr)
+	}
 
 	displayServerInfo(listenHost, listenPort)
 
