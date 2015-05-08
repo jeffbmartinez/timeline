@@ -23,7 +23,7 @@ func main() {
 
 	allowAnyHostToConnect, listenPort := getCommandLineArgs()
 
-	http.HandleFunc("/api/event/single", handler.Single)
+	http.HandleFunc("/api/event/simple", handler.Simple)
 	http.HandleFunc("/api/event/start", handler.Start)
 	http.HandleFunc("/api/event/stop", handler.Stop)
 
@@ -36,26 +36,6 @@ func main() {
 
 	listenAddress := fmt.Sprintf("%v:%v", listenHost, listenPort)
 	log.Fatal(http.ListenAndServe(listenAddress, nil))
-}
-
-type TimelineEntry struct {
-	RequesterId string `json:"requesterId"`
-	GroupId     string `json:"groupId"`
-	Message     string `json:"message"`
-}
-
-type SingleEntry struct {
-	TimelineEntry
-	DurationSeconds int `json:"durationSeconds"`
-}
-
-type StartEntry struct {
-	TimelineEntry
-}
-
-type StopEntry struct {
-	TimelineEntry
-	StartEntryId string `json:"startEntryId"`
 }
 
 func getPrintPrettyExitMessageFunc(projectName string) func() {
