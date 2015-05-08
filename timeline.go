@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/jeffbmartinez/cleanexit"
-	"github.com/jeffbmartinez/config"
 	"github.com/jeffbmartinez/log"
 
 	"github.com/jeffbmartinez/timeline/handler"
@@ -24,18 +23,7 @@ const (
 	INFLUXDB_HOST = "localhost"
 	INFLUXDB_PORT = 8086
 	INFLUXDB_NAME = "test_timeline"
-
-	CONFIG_FILENAME = "config.json"
 )
-
-type Config struct {
-	InfluxDb InfluxDbConfig
-}
-
-type InfluxDbConfig struct {
-	Username string
-	Password string
-}
 
 func main() {
 	cleanexit.SetUpExitOnCtrlC(getPrintPrettyExitMessageFunc(PROJECT_NAME))
@@ -51,26 +39,15 @@ func main() {
 		listenHost = ""
 	}
 
-	var configuration Config
-	err := config.ReadSpecific(CONFIG_FILENAME, &configuration)
-
+	connection, err := influxdb.GetClient()
 	if err != nil {
-		log.Fatal("Trouble reading config file")
+		log.Fatalf("Unable to get an influxdb client: %v", err)
 	}
 
-	verifyConfigOrDie(configuration)
-
-	initializeErr := influxdb.Initialize(
-		INFLUXDB_HOST,
-		INFLUXDB_PORT,
-		INFLUXDB_NAME,
-		configuration.InfluxDb.Username,
-		configuration.InfluxDb.Password,
-	)
-
-	if initializeErr != nil {
-		fmt.Println("Count not connect to influxDB")
-		log.Fatalf("Could not initialize connection to influxDB: %v", initializeErr)
+	err = influxdb.TestConnection(connection)
+	if err != nil {
+		fmt.Println("Could not connect to influxDB")
+		log.Fatalf("InfluxDB connection test failed: %v", err)
 	}
 
 	displayServerInfo(listenHost, listenPort)
@@ -79,27 +56,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }
 
-<<<<<<< HEAD
-func verifyConfigOrDie(configuration Config) {
-	const NUMBER_OF_CHECKS = 10
-
-	problems := make([]string, 0, NUMBER_OF_CHECKS)
-
-	if configuration.InfluxDb.Username == "" {
-		problems = append(problems, "Config is missing influxDb.username")
-	}
-
-	if configuration.InfluxDb.Password == "" {
-		problems = append(problems, "Config is missing influxDb.password")
-	}
-
-	if len(problems) > 0 {
-		log.Fatal(problems)
-	}
-}
-
-=======
->>>>>>> master
 func getPrintPrettyExitMessageFunc(projectName string) func() {
 	return func() {
 		/* \b is the equivalent of hitting the back arrow. With the two following
