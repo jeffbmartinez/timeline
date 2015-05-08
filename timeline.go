@@ -42,7 +42,7 @@ func main() {
 
 	allowAnyHostToConnect, listenPort := getCommandLineArgs()
 
-	http.HandleFunc("/api/event/single", handler.Single)
+	http.HandleFunc("/api/event/simple", handler.Simple)
 	http.HandleFunc("/api/event/start", handler.Start)
 	http.HandleFunc("/api/event/stop", handler.Stop)
 
@@ -79,6 +79,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }
 
+<<<<<<< HEAD
 func verifyConfigOrDie(configuration Config) {
 	const NUMBER_OF_CHECKS = 10
 
@@ -97,6 +98,8 @@ func verifyConfigOrDie(configuration Config) {
 	}
 }
 
+=======
+>>>>>>> master
 func getPrintPrettyExitMessageFunc(projectName string) func() {
 	return func() {
 		/* \b is the equivalent of hitting the back arrow. With the two following

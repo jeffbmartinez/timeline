@@ -9,7 +9,7 @@ import (
 	// "github.com/jeffbmartinez/timeline/storage"
 )
 
-func Single(response http.ResponseWriter, request *http.Request) {
+func Simple(response http.ResponseWriter, request *http.Request) {
 	urlArgs := request.URL.Query()
 
 	log.Info(urlArgs)
@@ -39,5 +39,5 @@ func Single(response http.ResponseWriter, request *http.Request) {
 	// 	Category: urlArgs.Get("category"),
 	// }
 
-	WriteSimpleResponse(response, "single event recorded", http.StatusOK)
+	WriteSimpleResponse(response, "simple event recorded", http.StatusOK)
 }
