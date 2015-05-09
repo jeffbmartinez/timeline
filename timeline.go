@@ -10,26 +10,44 @@ import (
 	"github.com/jeffbmartinez/log"
 
 	"github.com/jeffbmartinez/timeline/handler"
+	"github.com/jeffbmartinez/timeline/storage/influxdb"
 )
 
-const EXIT_SUCCESS = 0
-const EXIT_FAILURE = 1
-const EXIT_USAGE_FAILURE = 2 // Same as golang's flag module uses, hardcoded at https://github.com/golang/go/blob/release-branch.go1.4/src/flag/flag.go#L812
+const (
+	PROJECT_NAME = "timeline"
 
-const PROJECT_NAME = "timeline"
+	EXIT_SUCCESS       = 0
+	EXIT_FAILURE       = 1
+	EXIT_USAGE_FAILURE = 2 // Same as golang's flag module uses, hardcoded at https://github.com/golang/go/blob/release-branch.go1.4/src/flag/flag.go#L812
+
+	INFLUXDB_HOST = "localhost"
+	INFLUXDB_PORT = 8086
+	INFLUXDB_NAME = "test_timeline"
+)
 
 func main() {
 	cleanexit.SetUpExitOnCtrlC(getPrintPrettyExitMessageFunc(PROJECT_NAME))
 
 	allowAnyHostToConnect, listenPort := getCommandLineArgs()
 
-	http.HandleFunc("/api/event/simple", handler.Simple)
-	http.HandleFunc("/api/event/start", handler.Start)
-	http.HandleFunc("/api/event/stop", handler.Stop)
+	http.HandleFunc("/api/point/simple", handler.Simple)
+	http.HandleFunc("/api/point/start", handler.Start)
+	http.HandleFunc("/api/point/stop", handler.Stop)
 
 	listenHost := "localhost"
 	if allowAnyHostToConnect {
 		listenHost = ""
+	}
+
+	connection, err := influxdb.GetClient()
+	if err != nil {
+		log.Fatalf("Unable to get an influxdb client: %v", err)
+	}
+
+	err = influxdb.TestConnection(connection)
+	if err != nil {
+		fmt.Println("Could not connect to influxDB")
+		log.Fatalf("InfluxDB connection test failed: %v", err)
 	}
 
 	displayServerInfo(listenHost, listenPort)

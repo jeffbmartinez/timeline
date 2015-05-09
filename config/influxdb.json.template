@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "port": "8086",
+  "dbname": "your_database_name",
+  "username": "your_username",
+  "password": "your_password"
+}
