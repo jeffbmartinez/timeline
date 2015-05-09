@@ -98,7 +98,32 @@ func TestConnection(connection *client.Client) error {
 	return nil
 }
 
-func StoreEvent(event interface{}) error {
+func StorePoint(point client.Point, database string, retentionPolicy string) error {
+	points := []client.Point{point}
+	err := StorePoints(points, database, retentionPolicy)
+	return err
+}
+
+func StorePoints(points []client.Point, database string, retentionPolicy string) error {
+	influxDbClient, err := GetClient()
+	if err != nil {
+		errorMessage := fmt.Sprintf("Could not get an influxdb client: %v", err)
+		log.Error(errorMessage)
+		return errors.New(errorMessage)
+	}
+
+	batchPoints := client.BatchPoints{
+		Points:          points,
+		Database:        database,
+		RetentionPolicy: retentionPolicy,
+	}
+
+	_, err = influxDbClient.Write(batchPoints)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Count not write to influxdb: %v", err)
+		log.Error(errorMessage)
+		return errors.New(errorMessage)
+	}
 
 	return nil
 }

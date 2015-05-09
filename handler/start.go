@@ -25,10 +25,7 @@ func Start(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// event := &storage.Event{
-	// 	Owner:    urlArgs.Get("owner"),
-	// 	Category: urlArgs.Get("category"),
-	// }
+	// todo
 
-	WriteSimpleResponse(response, "start event recorded", http.StatusOK)
+	WriteSimpleResponse(response, "start point recorded", http.StatusOK)
 }

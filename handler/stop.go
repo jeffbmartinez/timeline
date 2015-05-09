@@ -25,10 +25,7 @@ func Stop(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// event := &storage.Event{
-	// 	Owner:    urlArgs.Get("owner"),
-	// 	Category: urlArgs.Get("category"),
-	// }
+	// todo
 
-	WriteSimpleResponse(response, "stop event recorded", http.StatusOK)
+	WriteSimpleResponse(response, "stop point recorded", http.StatusOK)
 }
