@@ -1,0 +1,28 @@
+{
+	"ImportPath": "github.com/jeffbmartinez/timeline",
+	"GoVersion": "go1.4.2",
+	"Deps": [
+		{
+			"ImportPath": "github.com/influxdb/influxdb/client",
+			"Comment": "v0.9.0-rc28-61-g5bd53e5",
+			"Rev": "5bd53e54509f3caebc558125dd0f6802a85827c2"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/influxql",
+			"Comment": "v0.9.0-rc28-61-g5bd53e5",
+			"Rev": "5bd53e54509f3caebc558125dd0f6802a85827c2"
+		},
+		{
+			"ImportPath": "github.com/jeffbmartinez/cleanexit",
+			"Rev": "4fdf7dd29a584ef7979ab424b344e51f5dd8e38b"
+		},
+		{
+			"ImportPath": "github.com/jeffbmartinez/config",
+			"Rev": "eb75447507ff9ad9ee293097e1d8de09a2a24fcf"
+		},
+		{
+			"ImportPath": "github.com/jeffbmartinez/log",
+			"Rev": "b76598e6b622d9aaf42efd934d257f80c6af76c2"
+		}
+	]
+}
