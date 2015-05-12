@@ -31,8 +31,6 @@ func main() {
 	allowAnyHostToConnect, listenPort := getCommandLineArgs()
 
 	http.HandleFunc("/api/point/simple", handler.Simple)
-	http.HandleFunc("/api/point/start", handler.Start)
-	http.HandleFunc("/api/point/stop", handler.Stop)
 
 	listenHost := "localhost"
 	if allowAnyHostToConnect {

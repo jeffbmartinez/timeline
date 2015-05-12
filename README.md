@@ -1,34 +1,22 @@
 # timeline
 Store data points or events in a timeline
 
-There are two ways to store points with **timeline**
+## How to store a data point
 
- - Send a *start* point followed by *stop* point. The response for the *start* point will include an id that must be provided to the *stop* point. Note that the *stop* point will not complain if you provide an invalid or non-existant start point id.
- - Send a *simple* data point, the difference is this has no followup *stop* point. If desired, you can always add a *duration* field to this.
+Data points require a minimum of one field called a *series*. This is a sort of category which the data point belongs to. For example, "living-room-temperature" could be a series. To store a point, send an http GET request with appropriate parameters using any http library to the `/api/point/simple` endpoint.
 
-The only required field for either of these is the *series* field. It will keep all of the points in the same series "grouped" together.
+### Example using curl
 
-# Endpoints
+    curl 'timeline-service.com/api/point/simple?series=living-room-temperature&value=70'
 
-## /api/point/simple
 
-## /api/point/start
+The only required field for either of these is the *series* field, without it the request will fail. You can add any number of arbitrary fields in the request.
 
-## /api/point/stop
+## How to run it
 
-# How to run it
-
- * install [InfluxDB](http://influxdb.com/ InfluxDB) (osx: `brew update && brew install influxdb`)
- * run influxdb, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started")).
+ * Install [InfluxDB](http://influxdb.com/ InfluxDB) (osx: `brew update && brew install influxdb`)
+ * Run influxdb, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started"))
  * `go get github.com/jeffbmartinez/timeline`
  * `cp config/influxdb.json.template config/influxdb.json`
- * fill out appropriate values in *config/influxdb.json*
+ * Fill out appropriate values in *config/influxdb.json*
  * `go run timeline.go`
-
-# How to use api
-
-## Just use http get requests
-
-Example:
-
-    curl 'example.com/api/point/simple?series=temperatures&location=living-room&value=70'
