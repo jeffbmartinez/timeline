@@ -97,7 +97,7 @@ func displayServerInfo(listenHost string, listenPort int) {
 		visibleTo = "All ip addresses"
 	}
 
-	fmt.Printf("%v is running.\n\n", PROJECT_NAME)
+	fmt.Printf("%v is running\n\n", PROJECT_NAME)
 	fmt.Printf("Visible to: %v\n", visibleTo)
 	fmt.Printf("Port: %v\n\n", listenPort)
 	fmt.Printf("Hit [ctrl-c] to quit\n")
