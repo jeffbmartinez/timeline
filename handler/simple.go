@@ -39,7 +39,7 @@ func Simple(response http.ResponseWriter, request *http.Request) {
 
 	const RETENTION_POLICY string = "default"
 
-	err := influxdb.StorePoint(point, influxDbConfig.DbName, RETENTION_POLICY)
+	err = influxdb.StorePoint(point, influxDbConfig.DbName, RETENTION_POLICY)
 	if err != nil {
 		log.Errorf("Problem writing to influxdb: %v", err)
 		WriteSimpleResponse(response, "Unable to store point", http.StatusInternalServerError)
