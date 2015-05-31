@@ -25,7 +25,7 @@ type Config struct {
 
 var configFileContents = new(Config)
 
-func ReadConfigFile() (*Config, error) {
+func GetConfiguration() (*Config, error) {
 	var err error
 
 	var once sync.Once
@@ -55,7 +55,7 @@ func ReadConfigFile() (*Config, error) {
 }
 
 func GetClient() (*client.Client, error) {
-	serverConfig, err := ReadConfigFile()
+	serverConfig, err := GetConfiguration()
 
 	if err != nil {
 		errorMessage := fmt.Sprintf("Could not read influxdb config file: %v", err)

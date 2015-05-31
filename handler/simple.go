@@ -30,7 +30,16 @@ func Simple(response http.ResponseWriter, request *http.Request) {
 
 	point := newSimplePoint(urlArgs)
 
-	err := influxdb.StorePoint(point, "test_timeline", "default")
+	influxDbConfig, err := influxdb.GetConfiguration()
+	if err != nil {
+		log.Errorf("Problem reading influxdb configuration: %v", err)
+		WriteSimpleResponse(response, "Unable to store point", http.StatusInternalServerError)
+		return
+	}
+
+	const RETENTION_POLICY string = "default"
+
+	err := influxdb.StorePoint(point, influxDbConfig.DbName, RETENTION_POLICY)
 	if err != nil {
 		log.Errorf("Problem writing to influxdb: %v", err)
 		WriteSimpleResponse(response, "Unable to store point", http.StatusInternalServerError)
