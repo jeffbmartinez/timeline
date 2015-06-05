@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CONFIG_FILENAME = "config/influxdb.json"
+	CONFIG_FILENAME = "config/timeline/influxdb.json"
 )
 
 type Config struct {

@@ -23,6 +23,6 @@ _testmain.go
 *.test
 *.prof
 
-config/*.json
+config/timeline/influxdb.json
 
 ignoreme/

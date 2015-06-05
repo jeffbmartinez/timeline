@@ -15,8 +15,8 @@ The only required field for either of these is the *series* field, without it th
 ## How to run it
 
  * Install [InfluxDB](http://influxdb.com/ InfluxDB) (osx: `brew update && brew install influxdb`)
- * Run influxdb, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started"))
+ * Run `influxdb run -config config/influxdb/development.toml`, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started"))
  * `go get github.com/jeffbmartinez/timeline`
- * `cp config/influxdb.json.template config/influxdb.json`
- * Fill out appropriate values in *config/influxdb.json*
+ * `cp config/timeline/influxdb.json.template config/timeline/influxdb.json`
+ * Fill out appropriate values in *config/timeline/influxdb.json*
  * `go run timeline.go`
