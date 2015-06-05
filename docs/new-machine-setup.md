@@ -30,7 +30,7 @@ The following assume you are in the user's home directory:
 - `sudo tar -C /usr/local -xzf go1.4.2.linux-amd64.tar.gz`
 - `mkdir -p ~/go/bin ~/go/pkg ~/go/src`
 - Add appropriate golang environment variables to `/etc/profile`
-  - `sudo bash -c "echo -e '\nexport PATH=\$PATH:/usr/local/go/bin\nexport GOPATH=\$HOME/go' >> /etc/profile"`
+  - `sudo bash -c "echo -e '\nexport PATH=\$PATH:/usr/local/go/bin:~/go/bin\nexport GOPATH=\$HOME/go' >> /etc/profile"`
 - Your current session won't have the updated golang environment variables, so log out and log in, or just add them manually for this session:
   - `export PATH=$PATH:/usr/local/go/bin`
   - `export GOPATH=$HOME/go`
