@@ -15,7 +15,7 @@ port = 8086
 # to track the number of instances running and the versions, which
 # is very helpful for us.
 # Change this option to true to disable reporting.
-reporting-disabled = false
+reporting-disabled = true
 
 # Controls settings for initial start-up. Once a node is successfully started,
 # these settings are ignored.  If a node is started with the -join flag,
@@ -81,7 +81,7 @@ enabled = false
 [broker]
 enabled = true
 # Where the Raft logs are stored. The user running InfluxDB will need read/write access.
-dir  = "~/.influxdb/broker"
+dir  = ".influxdb/broker"
 truncation-interval = "10m"
 max-topic-size = 52428800
 max-segment-size = 10485760
@@ -97,7 +97,7 @@ reconnect-timeout = "10ms"
 # shards, is stored.
 [data]
 enabled = true
-dir = "~/.influxdb/db"
+dir = ".influxdb/db"
 
 # Auto-create a retention policy when a database is created. Defaults to true.
 retention-auto-create = true
