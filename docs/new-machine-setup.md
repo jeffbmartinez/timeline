@@ -37,9 +37,9 @@ The following assume you are in the user's home directory:
 
 ## Install influxdb
 
-- `wget http://get.influxdb.org/influxdb_0.9.0-rc30_amd64.deb`
+- `wget http://get.influxdb.org/influxdb_0.9.0-rc32_amd64.deb`
   - Maybe want to check for a newer version at [the influxdb download page](http://influxdb.com/download/). **Scroll down** to see the section "Major Releases".
-- `sudo dpkg -i influxdb_0.9.0-rc30_amd64.deb`. 0.9.0 rc30 is the newest release as of 2015.05.15.
+- `sudo dpkg -i influxdb_0.9.0-rc32_amd64.deb`. 0.9.0 rc32 is the newest release as of 2015.06.07.
 
 ## Install grafana
 
