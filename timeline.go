@@ -14,19 +14,15 @@ import (
 )
 
 const (
-	PROJECT_NAME = "timeline"
+	projectName = "timeline"
 
-	EXIT_SUCCESS       = 0
-	EXIT_FAILURE       = 1
-	EXIT_USAGE_FAILURE = 2 // Same as golang's flag module uses, hardcoded at https://github.com/golang/go/blob/release-branch.go1.4/src/flag/flag.go#L812
-
-	INFLUXDB_HOST = "localhost"
-	INFLUXDB_PORT = 8086
-	INFLUXDB_NAME = "test_timeline"
+	exitSuccess      = 0
+	exitFailure      = 1
+	exitUsageFailure = 2 // Same as golang's flag module uses, hardcoded at https://github.com/golang/go/blob/release-branch.go1.4/src/flag/flag.go#L812
 )
 
 func main() {
-	cleanexit.SetUpExitOnCtrlC(getPrintPrettyExitMessageFunc(PROJECT_NAME))
+	cleanexit.SetUpExitOnCtrlC(getPrintPrettyExitMessageFunc(projectName))
 
 	allowAnyHostToConnect, listenPort := getCommandLineArgs()
 
@@ -65,10 +61,10 @@ func getPrintPrettyExitMessageFunc(projectName string) func() {
 }
 
 func getCommandLineArgs() (allowAnyHostToConnect bool, port int) {
-	const DEFAULT_PORT = 8000
+	const defaultPort = 8000
 
 	flag.BoolVar(&allowAnyHostToConnect, "a", false, "Use to allow any ip address (any host) to connect. Default allows ony localhost.")
-	flag.IntVar(&port, "port", DEFAULT_PORT, "Port on which to listen for connections.")
+	flag.IntVar(&port, "port", defaultPort, "Port on which to listen for connections.")
 
 	flag.Parse()
 
@@ -85,7 +81,7 @@ func getCommandLineArgs() (allowAnyHostToConnect bool, port int) {
 		https://github.com/golang/go/blob/release-branch.go1.4/src/flag/flag.go#L411
 		*/
 		flag.Usage()
-		os.Exit(EXIT_USAGE_FAILURE)
+		os.Exit(exitUsageFailure)
 	}
 
 	return
@@ -97,7 +93,7 @@ func displayServerInfo(listenHost string, listenPort int) {
 		visibleTo = "All ip addresses"
 	}
 
-	fmt.Printf("%v is running\n\n", PROJECT_NAME)
+	fmt.Printf("%v is running\n\n", projectName)
 	fmt.Printf("Visible to: %v\n", visibleTo)
 	fmt.Printf("Port: %v\n\n", listenPort)
 	fmt.Printf("Hit [ctrl-c] to quit\n")
