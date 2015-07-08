@@ -84,14 +84,9 @@ The mechanism is to create one or more points and then create a batch aka *batch
 and write these to a given database and series. A series is a combination of a
 measurement (time/values) and a set of tags.
 
-In this sample we will create a batch of a 1,000 points. Each point has a timestamp and
+In this sample we will create a batch of a 1,000 points. Each point has a time and
 a single value as well as 2 tags indicating a shape and color. We write these points
 to a database called _square_holes_ using a measurement named _shapes_.
-
-NOTE: In this example, we are specifically assigning timestamp, tags and precision
-to each point. Alternately, you can specify a timestamp, tags and precision at
-the batch point level that could be used as defaults if an associated point
-does not provide these metrics.
 
 NOTE: You can specify a RetentionPolicy as part of the batch points. If not
 provided InfluxDB will use the database _default_ retention policy. By default, the _default_
@@ -109,7 +104,7 @@ func writePoints(con *client.Client) {
 	rand.Seed(42)
 	for i := 0; i < sampleSize; i++ {
 		pts[i] = client.Point{
-			Name: "shapes",
+			Measurement: "shapes",
 			Tags: map[string]string{
 				"color": strconv.Itoa(rand.Intn(len(colors))),
 				"shape": strconv.Itoa(rand.Intn(len(shapes))),
@@ -117,7 +112,7 @@ func writePoints(con *client.Client) {
 			Fields: map[string]interface{}{
 				"value": rand.Intn(sampleSize),
 			},
-			Timestamp: time.Now(),
+			Time: time.Now(),
 			Precision: "s",
 		}
 	}

@@ -68,6 +68,7 @@ const (
 	DEFAULT
 	DELETE
 	DESC
+	DISTINCT
 	DROP
 	DURATION
 	END
@@ -77,6 +78,7 @@ const (
 	FOR
 	FROM
 	GRANT
+	GRANTS
 	GROUP
 	IF
 	IN
@@ -174,6 +176,7 @@ var tokens = [...]string{
 	DELETE:       "DELETE",
 	DESC:         "DESC",
 	DROP:         "DROP",
+	DISTINCT:     "DISTINCT",
 	DURATION:     "DURATION",
 	END:          "END",
 	EXISTS:       "EXISTS",
@@ -182,6 +185,7 @@ var tokens = [...]string{
 	FOR:          "FOR",
 	FROM:         "FROM",
 	GRANT:        "GRANT",
+	GRANTS:       "GRANTS",
 	GROUP:        "GROUP",
 	IF:           "IF",
 	IN:           "IN",

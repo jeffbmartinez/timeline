@@ -4,13 +4,13 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/influxdb/influxdb/client",
-			"Comment": "v0.9.0-rc28-61-g5bd53e5",
-			"Rev": "5bd53e54509f3caebc558125dd0f6802a85827c2"
+			"Comment": "v0.9.1-rc1-107-g3b815e3",
+			"Rev": "3b815e34f7a653c9def7c085aaafed0c3e65ae7e"
 		},
 		{
 			"ImportPath": "github.com/influxdb/influxdb/influxql",
-			"Comment": "v0.9.0-rc28-61-g5bd53e5",
-			"Rev": "5bd53e54509f3caebc558125dd0f6802a85827c2"
+			"Comment": "v0.9.1-rc1-107-g3b815e3",
+			"Rev": "3b815e34f7a653c9def7c085aaafed0c3e65ae7e"
 		},
 		{
 			"ImportPath": "github.com/jeffbmartinez/cleanexit",

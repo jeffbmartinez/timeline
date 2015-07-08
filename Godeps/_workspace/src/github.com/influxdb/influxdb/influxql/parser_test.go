@@ -57,6 +57,7 @@ func TestParser_ParseStatement(t *testing.T) {
 	now := time.Now()
 
 	var tests = []struct {
+		skip bool
 		s    string
 		stmt influxql.Statement
 		err  string
@@ -75,7 +76,8 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SELECT statement
 		{
-			s: `SELECT mean(field1), sum(field2) ,count(field3) AS field_x FROM myseries WHERE host = 'hosta.influxdb.org' GROUP BY time(10h) ORDER BY ASC LIMIT 20 OFFSET 10;`,
+			skip: true,
+			s:    fmt.Sprintf(`SELECT mean(field1), sum(field2) ,count(field3) AS field_x FROM myseries WHERE host = 'hosta.influxdb.org' and time > '%s' GROUP BY time(10h) ORDER BY ASC LIMIT 20 OFFSET 10;`, now.UTC().Format(time.RFC3339Nano)),
 			stmt: &influxql.SelectStatement{
 				IsRawQuery: false,
 				Fields: []*influxql.Field{
@@ -85,9 +87,17 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 				Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
 				Condition: &influxql.BinaryExpr{
-					Op:  influxql.EQ,
-					LHS: &influxql.VarRef{Val: "host"},
-					RHS: &influxql.StringLiteral{Val: "hosta.influxdb.org"},
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{
+						Op:  influxql.EQ,
+						LHS: &influxql.VarRef{Val: "host"},
+						RHS: &influxql.StringLiteral{Val: "hosta.influxdb.org"},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op:  influxql.GT,
+						LHS: &influxql.VarRef{Val: "time"},
+						RHS: &influxql.TimeLiteral{Val: now.UTC()},
+					},
 				},
 				Dimensions: []*influxql.Dimension{{Expr: &influxql.Call{Name: "time", Args: []influxql.Expr{&influxql.DurationLiteral{Val: 10 * time.Hour}}}}},
 				SortFields: []*influxql.SortField{
@@ -95,6 +105,40 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 				Limit:  20,
 				Offset: 10,
+			},
+		},
+
+		// derivative
+		{
+			s: `SELECT derivative(field1, 1h) FROM myseries;`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "derivative", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}, &influxql.DurationLiteral{Val: time.Hour}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+			},
+		},
+
+		{
+			s: `SELECT derivative(mean(field1), 1h) FROM myseries;`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "derivative", Args: []influxql.Expr{&influxql.Call{Name: "mean", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}}}, &influxql.DurationLiteral{Val: time.Hour}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+			},
+		},
+
+		{
+			s: `SELECT derivative(mean(field1)) FROM myseries;`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "derivative", Args: []influxql.Expr{&influxql.Call{Name: "mean", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}}}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
 			},
 		},
 
@@ -108,9 +152,20 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 		},
 
+		// SELECT statement (lowercase) with quoted field
+		{
+			s: `select 'my_field' from myseries`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields:     []*influxql.Field{{Expr: &influxql.StringLiteral{Val: "my_field"}}},
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "myseries"}},
+			},
+		},
+
 		// SELECT statement with multiple ORDER BY fields
 		{
-			s: `SELECT field1 FROM myseries ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SELECT field1 FROM myseries ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.SelectStatement{
 				IsRawQuery: true,
 				Fields:     []*influxql.Field{{Expr: &influxql.VarRef{Val: "field1"}}},
@@ -156,6 +211,64 @@ func TestParser_ParseStatement(t *testing.T) {
 						RHS: &influxql.RegexLiteral{Val: regexp.MustCompile(".*west.*")},
 					},
 				},
+			},
+		},
+
+		// select distinct statements
+		{
+			s: `select distinct(field1) from cpu`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "distinct", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		{
+			s: `select distinct field2 from network`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: true,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Distinct{Val: "field2"}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "network"}},
+			},
+		},
+
+		{
+			s: `select count(distinct field3) from metrics`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "count", Args: []influxql.Expr{&influxql.Distinct{Val: "field3"}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "metrics"}},
+			},
+		},
+
+		{
+			s: `select count(distinct field3), sum(field4) from metrics`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "count", Args: []influxql.Expr{&influxql.Distinct{Val: "field3"}}}},
+					{Expr: &influxql.Call{Name: "sum", Args: []influxql.Expr{&influxql.VarRef{Val: "field4"}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "metrics"}},
+			},
+		},
+
+		{
+			s: `select count(distinct(field3)), sum(field4) from metrics`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "count", Args: []influxql.Expr{&influxql.Call{Name: "distinct", Args: []influxql.Expr{&influxql.VarRef{Val: "field3"}}}}}},
+					{Expr: &influxql.Call{Name: "sum", Args: []influxql.Expr{&influxql.VarRef{Val: "field4"}}}},
+				},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "metrics"}},
 			},
 		},
 
@@ -261,7 +374,8 @@ func TestParser_ParseStatement(t *testing.T) {
 				IsRawQuery: true,
 				Fields:     []*influxql.Field{{Expr: &influxql.Wildcard{}}},
 				Sources: []influxql.Source{&influxql.Measurement{
-					Regex: &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}}},
+					Regex: &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}},
+				},
 			},
 		},
 
@@ -274,7 +388,8 @@ func TestParser_ParseStatement(t *testing.T) {
 				Sources: []influxql.Source{&influxql.Measurement{
 					Database:        `db`,
 					RetentionPolicy: `rp`,
-					Regex:           &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}}},
+					Regex:           &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}},
+				},
 			},
 		},
 
@@ -286,7 +401,8 @@ func TestParser_ParseStatement(t *testing.T) {
 				Fields:     []*influxql.Field{{Expr: &influxql.Wildcard{}}},
 				Sources: []influxql.Source{&influxql.Measurement{
 					Database: `db`,
-					Regex:    &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}}},
+					Regex:    &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}},
+				},
 			},
 		},
 
@@ -298,19 +414,63 @@ func TestParser_ParseStatement(t *testing.T) {
 				Fields:     []*influxql.Field{{Expr: &influxql.Wildcard{}}},
 				Sources: []influxql.Source{&influxql.Measurement{
 					RetentionPolicy: `rp`,
-					Regex:           &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}}},
+					Regex:           &influxql.RegexLiteral{Val: regexp.MustCompile("cpu.*")}},
+				},
+			},
+		},
+
+		// SELECT statement with group by
+		{
+			s: `SELECT sum(value) FROM "kbps" WHERE time > now() - 120s AND deliveryservice='steam-dns' and cachegroup = 'total' GROUP BY time(60s)`,
+			stmt: &influxql.SelectStatement{
+				IsRawQuery: false,
+				Fields: []*influxql.Field{
+					{Expr: &influxql.Call{Name: "sum", Args: []influxql.Expr{&influxql.VarRef{Val: "value"}}}},
+				},
+				Sources:    []influxql.Source{&influxql.Measurement{Name: "kbps"}},
+				Dimensions: []*influxql.Dimension{{Expr: &influxql.Call{Name: "time", Args: []influxql.Expr{&influxql.DurationLiteral{Val: 60 * time.Second}}}}},
+				Condition: &influxql.BinaryExpr{ // 1
+					Op: influxql.AND,
+					LHS: &influxql.BinaryExpr{ // 2
+						Op: influxql.AND,
+						LHS: &influxql.BinaryExpr{ //3
+							Op:  influxql.GT,
+							LHS: &influxql.VarRef{Val: "time"},
+							RHS: &influxql.BinaryExpr{
+								Op:  influxql.SUB,
+								LHS: &influxql.Call{Name: "now"},
+								RHS: &influxql.DurationLiteral{Val: mustParseDuration("120s")},
+							},
+						},
+						RHS: &influxql.BinaryExpr{
+							Op:  influxql.EQ,
+							LHS: &influxql.VarRef{Val: "deliveryservice"},
+							RHS: &influxql.StringLiteral{Val: "steam-dns"},
+						},
+					},
+					RHS: &influxql.BinaryExpr{
+						Op:  influxql.EQ,
+						LHS: &influxql.VarRef{Val: "cachegroup"},
+						RHS: &influxql.StringLiteral{Val: "total"},
+					},
+				},
 			},
 		},
 
 		// SELECT statement with fill
 		{
-			s: `SELECT mean(value) FROM cpu GROUP BY time(5m) fill(1)`,
+			s: fmt.Sprintf(`SELECT mean(value) FROM cpu where time < '%s' GROUP BY time(5m) fill(1)`, now.UTC().Format(time.RFC3339Nano)),
 			stmt: &influxql.SelectStatement{
 				Fields: []*influxql.Field{{
 					Expr: &influxql.Call{
 						Name: "mean",
 						Args: []influxql.Expr{&influxql.VarRef{Val: "value"}}}}},
-				Sources:    []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.LT,
+					LHS: &influxql.VarRef{Val: "time"},
+					RHS: &influxql.TimeLiteral{Val: now.UTC()},
+				},
 				Dimensions: []*influxql.Dimension{{Expr: &influxql.Call{Name: "time", Args: []influxql.Expr{&influxql.DurationLiteral{Val: 5 * time.Minute}}}}},
 				Fill:       influxql.NumberFill,
 				FillValue:  float64(1),
@@ -319,13 +479,18 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SELECT statement with FILL(none) -- check case insensitivity
 		{
-			s: `SELECT mean(value) FROM cpu GROUP BY time(5m) FILL(none)`,
+			s: fmt.Sprintf(`SELECT mean(value) FROM cpu where time < '%s' GROUP BY time(5m) FILL(none)`, now.UTC().Format(time.RFC3339Nano)),
 			stmt: &influxql.SelectStatement{
 				Fields: []*influxql.Field{{
 					Expr: &influxql.Call{
 						Name: "mean",
 						Args: []influxql.Expr{&influxql.VarRef{Val: "value"}}}}},
-				Sources:    []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.LT,
+					LHS: &influxql.VarRef{Val: "time"},
+					RHS: &influxql.TimeLiteral{Val: now.UTC()},
+				},
 				Dimensions: []*influxql.Dimension{{Expr: &influxql.Call{Name: "time", Args: []influxql.Expr{&influxql.DurationLiteral{Val: 5 * time.Minute}}}}},
 				Fill:       influxql.NoFill,
 			},
@@ -333,13 +498,18 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SELECT statement with previous fill
 		{
-			s: `SELECT mean(value) FROM cpu GROUP BY time(5m) fill(previous)`,
+			s: fmt.Sprintf(`SELECT mean(value) FROM cpu where time < '%s' GROUP BY time(5m) FILL(previous)`, now.UTC().Format(time.RFC3339Nano)),
 			stmt: &influxql.SelectStatement{
 				Fields: []*influxql.Field{{
 					Expr: &influxql.Call{
 						Name: "mean",
 						Args: []influxql.Expr{&influxql.VarRef{Val: "value"}}}}},
-				Sources:    []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+				Condition: &influxql.BinaryExpr{
+					Op:  influxql.LT,
+					LHS: &influxql.VarRef{Val: "time"},
+					RHS: &influxql.TimeLiteral{Val: now.UTC()},
+				},
 				Dimensions: []*influxql.Dimension{{Expr: &influxql.Call{Name: "time", Args: []influxql.Expr{&influxql.DurationLiteral{Val: 5 * time.Minute}}}}},
 				Fill:       influxql.PreviousFill,
 			},
@@ -364,6 +534,12 @@ func TestParser_ParseStatement(t *testing.T) {
 			stmt: &influxql.ShowServersStatement{},
 		},
 
+		// SHOW GRANTS
+		{
+			s:    `SHOW GRANTS FOR jdoe`,
+			stmt: &influxql.ShowGrantsForUserStatement{Name: "jdoe"},
+		},
+
 		// SHOW DATABASES
 		{
 			s:    `SHOW DATABASES`,
@@ -374,6 +550,26 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s:    `SHOW SERIES`,
 			stmt: &influxql.ShowSeriesStatement{},
+		},
+
+		// SHOW SERIES FROM
+		{
+			s: `SHOW SERIES FROM cpu`,
+			stmt: &influxql.ShowSeriesStatement{
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
+			},
+		},
+
+		// SHOW SERIES FROM /<regex>/
+		{
+			s: `SHOW SERIES FROM /[cg]pu/`,
+			stmt: &influxql.ShowSeriesStatement{
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						Regex: &influxql.RegexLiteral{Val: regexp.MustCompile(`[cg]pu`)},
+					},
+				},
+			},
 		},
 
 		// SHOW SERIES with OFFSET 0
@@ -390,7 +586,8 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SHOW SERIES WHERE with ORDER BY and LIMIT
 		{
-			s: `SHOW SERIES WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SHOW SERIES WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.ShowSeriesStatement{
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
@@ -408,7 +605,8 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SHOW MEASUREMENTS WHERE with ORDER BY and LIMIT
 		{
-			s: `SHOW MEASUREMENTS WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SHOW MEASUREMENTS WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.ShowMeasurementsStatement{
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
@@ -436,15 +634,28 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW TAG KEYS FROM src`,
 			stmt: &influxql.ShowTagKeysStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
+			},
+		},
+
+		// SHOW TAG KEYS FROM /<regex>/
+		{
+			s: `SHOW TAG KEYS FROM /[cg]pu/`,
+			stmt: &influxql.ShowTagKeysStatement{
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						Regex: &influxql.RegexLiteral{Val: regexp.MustCompile(`[cg]pu`)},
+					},
+				},
 			},
 		},
 
 		// SHOW TAG KEYS
 		{
-			s: `SHOW TAG KEYS FROM src WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SHOW TAG KEYS FROM src WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.ShowTagKeysStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
 					LHS: &influxql.VarRef{Val: "region"},
@@ -461,9 +672,10 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SHOW TAG VALUES FROM ... WITH KEY = ...
 		{
-			s: `SHOW TAG VALUES FROM src WITH KEY = region WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SHOW TAG VALUES FROM src WITH KEY = region WHERE region = 'uswest' ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.ShowTagValuesStatement{
-				Source:  &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				TagKeys: []string{"region"},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
@@ -483,7 +695,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW TAG VALUES FROM cpu WITH KEY IN (region, host) WHERE region = 'uswest'`,
 			stmt: &influxql.ShowTagValuesStatement{
-				Source:  &influxql.Measurement{Name: "cpu"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
 				TagKeys: []string{"region", "host"},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
@@ -497,7 +709,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `SHOW TAG VALUES FROM cpu WITH KEY IN (region,service,host)WHERE region = 'uswest'`,
 			stmt: &influxql.ShowTagValuesStatement{
-				Source:  &influxql.Measurement{Name: "cpu"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "cpu"}},
 				TagKeys: []string{"region", "service", "host"},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
@@ -517,6 +729,19 @@ func TestParser_ParseStatement(t *testing.T) {
 					LHS: &influxql.VarRef{Val: "region"},
 					RHS: &influxql.StringLiteral{Val: "uswest"},
 				},
+			},
+		},
+
+		// SHOW TAG VALUES FROM /<regex>/ WITH KEY = ...
+		{
+			s: `SHOW TAG VALUES FROM /[cg]pu/ WITH KEY = host`,
+			stmt: &influxql.ShowTagValuesStatement{
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						Regex: &influxql.RegexLiteral{Val: regexp.MustCompile(`[cg]pu`)},
+					},
+				},
+				TagKeys: []string{"host"},
 			},
 		},
 
@@ -541,9 +766,10 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// SHOW FIELD KEYS
 		{
-			s: `SHOW FIELD KEYS FROM src ORDER BY ASC, field1, field2 DESC LIMIT 10`,
+			skip: true,
+			s:    `SHOW FIELD KEYS FROM src ORDER BY ASC, field1, field2 DESC LIMIT 10`,
 			stmt: &influxql.ShowFieldKeysStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				SortFields: []*influxql.SortField{
 					{Ascending: true},
 					{Name: "field1"},
@@ -552,15 +778,21 @@ func TestParser_ParseStatement(t *testing.T) {
 				Limit: 10,
 			},
 		},
+		{
+			s: `SHOW FIELD KEYS FROM /[cg]pu/`,
+			stmt: &influxql.ShowFieldKeysStatement{
+				Sources: []influxql.Source{
+					&influxql.Measurement{
+						Regex: &influxql.RegexLiteral{Val: regexp.MustCompile(`[cg]pu`)},
+					},
+				},
+			},
+		},
 
 		// DROP SERIES statement
 		{
-			s:    `DROP SERIES 1`,
-			stmt: &influxql.DropSeriesStatement{SeriesID: 1},
-		},
-		{
 			s:    `DROP SERIES FROM src`,
-			stmt: &influxql.DropSeriesStatement{Source: &influxql.Measurement{Name: "src"}},
+			stmt: &influxql.DropSeriesStatement{Sources: []influxql.Source{&influxql.Measurement{Name: "src"}}},
 		},
 		{
 			s: `DROP SERIES WHERE host = 'hosta.influxdb.org'`,
@@ -575,7 +807,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		{
 			s: `DROP SERIES FROM src WHERE host = 'hosta.influxdb.org'`,
 			stmt: &influxql.DropSeriesStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
 					LHS: &influxql.VarRef{Val: "host"},
@@ -592,12 +824,12 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// CREATE CONTINUOUS QUERY ... INTO <measurement>
 		{
-			s: `CREATE CONTINUOUS QUERY myquery ON testdb BEGIN SELECT count() INTO measure1 FROM myseries GROUP BY time(5m) END`,
+			s: `CREATE CONTINUOUS QUERY myquery ON testdb BEGIN SELECT count(field1) INTO measure1 FROM myseries GROUP BY time(5m) END`,
 			stmt: &influxql.CreateContinuousQueryStatement{
 				Name:     "myquery",
 				Database: "testdb",
 				Source: &influxql.SelectStatement{
-					Fields:  []*influxql.Field{{Expr: &influxql.Call{Name: "count"}}},
+					Fields:  []*influxql.Field{{Expr: &influxql.Call{Name: "count", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}}}}},
 					Target:  &influxql.Target{Measurement: &influxql.Measurement{Name: "measure1"}},
 					Sources: []influxql.Source{&influxql.Measurement{Name: "myseries"}},
 					Dimensions: []*influxql.Dimension{
@@ -630,12 +862,12 @@ func TestParser_ParseStatement(t *testing.T) {
 
 		// CREATE CONTINUOUS QUERY ... INTO <retention-policy>.<measurement>
 		{
-			s: `CREATE CONTINUOUS QUERY myquery ON testdb BEGIN SELECT count() INTO "1h.policy1"."cpu.load" FROM myseries GROUP BY time(5m) END`,
+			s: `CREATE CONTINUOUS QUERY myquery ON testdb BEGIN SELECT count(field1) INTO "1h.policy1"."cpu.load" FROM myseries GROUP BY time(5m) END`,
 			stmt: &influxql.CreateContinuousQueryStatement{
 				Name:     "myquery",
 				Database: "testdb",
 				Source: &influxql.SelectStatement{
-					Fields: []*influxql.Field{{Expr: &influxql.Call{Name: "count"}}},
+					Fields: []*influxql.Field{{Expr: &influxql.Call{Name: "count", Args: []influxql.Expr{&influxql.VarRef{Val: "field1"}}}}},
 					Target: &influxql.Target{
 						Measurement: &influxql.Measurement{RetentionPolicy: "1h.policy1", Name: "cpu.load"},
 					},
@@ -969,25 +1201,43 @@ func TestParser_ParseStatement(t *testing.T) {
 		{s: `SELECT field1 FROM myseries OFFSET`, err: `found EOF, expected number at line 1, char 36`},
 		{s: `SELECT field1 FROM myseries OFFSET 10.5`, err: `fractional parts not allowed in OFFSET at line 1, char 36`},
 		{s: `SELECT field1 FROM myseries ORDER`, err: `found EOF, expected BY at line 1, char 35`},
-		{s: `SELECT field1 FROM myseries ORDER BY /`, err: `found /, expected identifier, ASC, or DESC at line 1, char 38`},
-		{s: `SELECT field1 FROM myseries ORDER BY 1`, err: `found 1, expected identifier, ASC, or DESC at line 1, char 38`},
+		{s: `SELECT field1 FROM myseries ORDER BY /`, err: `only ORDER BY ASC supported at this time`},
+		{s: `SELECT field1 FROM myseries ORDER BY 1`, err: `only ORDER BY ASC supported at this time`},
+		{s: `SELECT field1 FROM myseries ORDER BY DESC`, err: `only ORDER BY ASC supported at this time`},
 		{s: `SELECT field1 AS`, err: `found EOF, expected identifier at line 1, char 18`},
 		{s: `SELECT field1 FROM foo group by time(1s)`, err: `GROUP BY requires at least one aggregate function`},
+		{s: `SELECT count(value) FROM foo group by time(1s)`, err: `aggregate functions with GROUP BY time require a WHERE time clause`},
+		{s: `SELECT count(value) FROM foo group by time(1s) where host = 'hosta.influxdb.org'`, err: `aggregate functions with GROUP BY time require a WHERE time clause`},
 		{s: `SELECT field1 FROM 12`, err: `found 12, expected identifier at line 1, char 20`},
 		{s: `SELECT 1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 FROM myseries`, err: `unable to parse number at line 1, char 8`},
 		{s: `SELECT 10.5h FROM myseries`, err: `found h, expected FROM at line 1, char 12`},
+		{s: `SELECT derivative(field1), field1 FROM myseries`, err: `derivative cannot be used with other fields`},
+		{s: `SELECT distinct(field1), sum(field1) FROM myseries`, err: `aggregate function distinct() can not be combined with other functions or fields`},
+		{s: `SELECT distinct(field1), field2 FROM myseries`, err: `aggregate function distinct() can not be combined with other functions or fields`},
+		{s: `SELECT distinct(field1, field2) FROM myseries`, err: `distinct function can only have one argument`},
+		{s: `SELECT distinct() FROM myseries`, err: `distinct function requires at least one argument`},
+		{s: `SELECT distinct FROM myseries`, err: `found FROM, expected identifier at line 1, char 17`},
+		{s: `SELECT distinct field1, field2 FROM myseries`, err: `aggregate function distinct() can not be combined with other functions or fields`},
+		{s: `SELECT count(distinct) FROM myseries`, err: `found ), expected (, identifier at line 1, char 22`},
+		{s: `SELECT count(distinct field1, field2) FROM myseries`, err: `count(distinct <field>) can only have one argument`},
+		{s: `select count(distinct(too, many, arguments)) from myseries`, err: `count(distinct <field>) can only have one argument`},
+		{s: `select count() from myseries`, err: `invalid number of arguments for count, expected 1, got 0`},
+		{s: `select derivative() from myseries`, err: `invalid number of arguments for derivative, expected at least 1 but no more than 2, got 0`},
+		{s: `select derivative(mean(value), 1h, 3) from myseries`, err: `invalid number of arguments for derivative, expected at least 1 but no more than 2, got 3`},
 		{s: `DELETE`, err: `found EOF, expected FROM at line 1, char 8`},
 		{s: `DELETE FROM`, err: `found EOF, expected identifier at line 1, char 13`},
 		{s: `DELETE FROM myseries WHERE`, err: `found EOF, expected identifier, string, number, bool at line 1, char 28`},
 		{s: `DROP MEASUREMENT`, err: `found EOF, expected identifier at line 1, char 18`},
-		{s: `DROP SERIES`, err: `found EOF, expected number at line 1, char 13`},
+		{s: `DROP SERIES`, err: `found EOF, expected FROM, WHERE at line 1, char 13`},
 		{s: `DROP SERIES FROM`, err: `found EOF, expected identifier at line 1, char 18`},
 		{s: `DROP SERIES FROM src WHERE`, err: `found EOF, expected identifier, string, number, bool at line 1, char 28`},
 		{s: `SHOW CONTINUOUS`, err: `found EOF, expected QUERIES at line 1, char 17`},
 		{s: `SHOW RETENTION`, err: `found EOF, expected POLICIES at line 1, char 16`},
 		{s: `SHOW RETENTION POLICIES`, err: `found EOF, expected identifier at line 1, char 25`},
-		{s: `SHOW FOO`, err: `found FOO, expected CONTINUOUS, DATABASES, FIELD, MEASUREMENTS, RETENTION, SERIES, SERVERS, TAG, USERS at line 1, char 6`},
+		{s: `SHOW FOO`, err: `found FOO, expected CONTINUOUS, DATABASES, FIELD, GRANTS, MEASUREMENTS, RETENTION, SERIES, SERVERS, TAG, USERS at line 1, char 6`},
 		{s: `SHOW STATS ON`, err: `found EOF, expected string at line 1, char 15`},
+		{s: `SHOW GRANTS`, err: `found EOF, expected FOR at line 1, char 13`},
+		{s: `SHOW GRANTS FOR`, err: `found EOF, expected identifier at line 1, char 17`},
 		{s: `DROP CONTINUOUS`, err: `found EOF, expected QUERY at line 1, char 17`},
 		{s: `DROP CONTINUOUS QUERY`, err: `found EOF, expected identifier at line 1, char 23`},
 		{s: `DROP CONTINUOUS QUERY myquery`, err: `found EOF, expected ON at line 1, char 31`},
@@ -1046,6 +1296,10 @@ func TestParser_ParseStatement(t *testing.T) {
 	}
 
 	for i, tt := range tests {
+		if tt.skip {
+			t.Logf("skipping test of '%s'", tt.s)
+			continue
+		}
 		stmt, err := influxql.NewParser(strings.NewReader(tt.s)).ParseStatement()
 
 		// We are memoizing a field so for testing we need to...
@@ -1060,7 +1314,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		if !reflect.DeepEqual(tt.err, errstring(err)) {
 			t.Errorf("%d. %q: error mismatch:\n  exp=%s\n  got=%s\n\n", i, tt.s, tt.err, err)
 		} else if tt.err == "" && !reflect.DeepEqual(tt.stmt, stmt) {
-			t.Logf("exp=%s\ngot=%s\n", mustMarshalJSON(tt.stmt), mustMarshalJSON(stmt))
+			t.Logf("\nexp=%s\ngot=%s\n", mustMarshalJSON(tt.stmt), mustMarshalJSON(stmt))
 			t.Errorf("%d. %q\n\nstmt mismatch:\n\nexp=%#v\n\ngot=%#v\n\n", i, tt.s, tt.stmt, stmt)
 		}
 	}
@@ -1353,17 +1607,13 @@ func TestDropSeriesStatement_String(t *testing.T) {
 		stmt influxql.Statement
 	}{
 		{
-			s:    `DROP SERIES 1`,
-			stmt: &influxql.DropSeriesStatement{SeriesID: 1},
-		},
-		{
 			s:    `DROP SERIES FROM src`,
-			stmt: &influxql.DropSeriesStatement{Source: &influxql.Measurement{Name: "src"}},
+			stmt: &influxql.DropSeriesStatement{Sources: []influxql.Source{&influxql.Measurement{Name: "src"}}},
 		},
 		{
 			s: `DROP SERIES FROM src WHERE host = 'hosta.influxdb.org'`,
 			stmt: &influxql.DropSeriesStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
 					LHS: &influxql.VarRef{Val: "host"},
@@ -1374,7 +1624,7 @@ func TestDropSeriesStatement_String(t *testing.T) {
 		{
 			s: `DROP SERIES FROM src WHERE host = 'hosta.influxdb.org'`,
 			stmt: &influxql.DropSeriesStatement{
-				Source: &influxql.Measurement{Name: "src"},
+				Sources: []influxql.Source{&influxql.Measurement{Name: "src"}},
 				Condition: &influxql.BinaryExpr{
 					Op:  influxql.EQ,
 					LHS: &influxql.VarRef{Val: "host"},
