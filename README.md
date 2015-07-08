@@ -1,9 +1,11 @@
 # timeline
-Store data points or events in a timeline
+Store data points or events in a timeline.
+
+Data points belong to a *time series* and can have associated with them any number of *tag*s. Tags are indexed and can help with retrieving your data later on.
 
 ## How to store a data point
 
-Data points require a minimum of one field called a *series*. This is a sort of category which the data point belongs to. For example, "living-room-temperature" could be a series. To store a point, send an http GET request with appropriate parameters using any http library to the `/api/point/simple` endpoint.
+Data points must be associated with a *time series*. This is a sort of grouping which the data point belongs to. For example, "living-room-temperature" could be a time series. To store a point, send an http GET request with appropriate parameters using any http library to the `/api/point/simple` endpoint.
 
 ### Example using curl
 
@@ -15,7 +17,7 @@ The only required field for either of these is the *series* field, without it th
 ## How to run it
 
  * Install [InfluxDB](http://influxdb.com/ InfluxDB) (osx: `brew update && brew install influxdb`)
- * Run `influxdb run -config config/influxdb/development.toml`, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started"))
+ * Run `influxd run -config config/influxdb/development.toml`, set up a database and user (See [InfluxDb Getting Started](http://influxdb.com/docs/v0.9/introduction/getting_started.html "InfluxDB Getting Started"))
  * `go get github.com/jeffbmartinez/timeline`
  * `cp config/timeline/influxdb.json.template config/timeline/influxdb.json`
  * Fill out appropriate values in *config/timeline/influxdb.json*
