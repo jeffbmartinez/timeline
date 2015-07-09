@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 
 	"github.com/jeffbmartinez/log"
 )
@@ -32,11 +31,11 @@ func WriteResponse(response http.ResponseWriter, message interface{}, statusCode
 	response.Write([]byte(responseString))
 }
 
-func GetAnyMissingArgs(urlArgs url.Values, requiredArgs []string) []string {
+func GetMissingArgs(urlArgs map[string]string, requiredArgs []string) []string {
 	missingArgs := make([]string, 0, len(urlArgs))
 
 	for _, requiredArg := range requiredArgs {
-		if urlArgs.Get(requiredArg) == "" {
+		if _, ok := urlArgs[requiredArg]; !ok {
 			missingArgs = append(missingArgs, requiredArg)
 		}
 	}
