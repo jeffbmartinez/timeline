@@ -9,7 +9,6 @@ POST /api/measurement
 
 Parameters:
 
- - series
  - name
  - value
  - tags
@@ -22,6 +21,5 @@ POST /api/event
 
 Parameters:
 
- - series
  - name
  - tags
