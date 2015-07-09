@@ -22,7 +22,7 @@ func TestEventEndpoint_PostWithNoParams(t *testing.T) {
 }
 
 func TestEventEndpoint_PostWithMissingNameParam(t *testing.T) {
-	request, _ := http.NewRequest("POST", "http://localhost?key1=value1&key2=value", nil)
+	request, _ := http.NewRequest("POST", "http://example.com?key1=value1&key2=value", nil)
 	response := httptest.NewRecorder()
 
 	handler.Event(response, request)
@@ -48,7 +48,7 @@ func TestMeasurementEndpoint_PostWithNoParams(t *testing.T) {
 }
 
 func TestMeasurementEndpoint_PostWithMissingNameParam(t *testing.T) {
-	request, _ := http.NewRequest("POST", "http://localhost?key1=value1&key2=value", nil)
+	request, _ := http.NewRequest("POST", "http://example.com?key1=value1&key2=value", nil)
 	response := httptest.NewRecorder()
 
 	handler.Measurement(response, request)
